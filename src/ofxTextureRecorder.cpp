@@ -7,26 +7,33 @@
 
 #include "ofxTextureRecorder.h"
 
-ofxTextureRecorder::~ofxTextureRecorder(){
-	if(!encodeThreads.empty()){
+ofxTextureRecorder::~ofxTextureRecorder()
+{
+	if (!encodeThreads.empty())
+	{
 		stopThreads();
 	}
 }
 
-void ofxTextureRecorder::setup(int w, int h){
-	setup(Settings(w,h));
+void ofxTextureRecorder::setup(int w, int h)
+{
+	setup(Settings(w, h));
 }
 
-void ofxTextureRecorder::setup(const ofTexture & tex){
+void ofxTextureRecorder::setup(const ofTexture &tex)
+{
 	setup(Settings(tex));
 }
 
-void ofxTextureRecorder::setup(const ofTextureData & texData){
+void ofxTextureRecorder::setup(const ofTextureData &texData)
+{
 	setup(Settings(texData));
 }
 
-void ofxTextureRecorder::setup(const Settings & settings){
-	if(!encodeThreads.empty()){
+void ofxTextureRecorder::setup(const Settings &settings)
+{
+	if (!encodeThreads.empty())
+	{
 		stopThreads();
 	}
 	width = settings.w;
@@ -37,47 +44,51 @@ void ofxTextureRecorder::setup(const Settings & settings){
 	glType = settings.glType;
 	isVideo = false;
 	maxMemoryUsage = settings.maxMemoryUsage;
-	if (!folderPath.empty()) folderPath = ofFilePath::addTrailingSlash(folderPath);
+	if (!folderPath.empty())
+		folderPath = ofFilePath::addTrailingSlash(folderPath);
 
 	frame = 0;
-    firstFrame = true;
+	firstFrame = true;
 	auto bufferSize = 0;
-	switch(glType){
-		case GL_UNSIGNED_BYTE:
-			bufferSize = ofPixels::bytesFromPixelFormat(width,height,pixelFormat);
+	switch (glType)
+	{
+	case GL_UNSIGNED_BYTE:
+		bufferSize = ofPixels::bytesFromPixelFormat(width, height, pixelFormat);
 		break;
-		case GL_SHORT:
-		case GL_UNSIGNED_SHORT:
-			bufferSize = ofShortPixels::bytesFromPixelFormat(width,height,pixelFormat);
+	case GL_SHORT:
+	case GL_UNSIGNED_SHORT:
+		bufferSize = ofShortPixels::bytesFromPixelFormat(width, height, pixelFormat);
 		break;
-		case GL_FLOAT:
-			bufferSize = ofFloatPixels::bytesFromPixelFormat(width,height,pixelFormat);
+	case GL_FLOAT:
+		bufferSize = ofFloatPixels::bytesFromPixelFormat(width, height, pixelFormat);
 		break;
-		case GL_HALF_FLOAT:
-			bufferSize = ofFloatPixels::bytesFromPixelFormat(width,height,pixelFormat)/2;
+	case GL_HALF_FLOAT:
+		bufferSize = ofFloatPixels::bytesFromPixelFormat(width, height, pixelFormat) / 2;
 		break;
 	}
 
 	// number of gpu buffers to copy the texture
 	size_t numGpuBuffers = 2;
-	for(size_t i=0; i<std::min(numGpuBuffers, size_t(2)); i++){
+	for (size_t i = 0; i < std::min(numGpuBuffers, size_t(2)); i++)
+	{
 		pixelBuffers.emplace_back();
 		pixelBuffers.back().allocate(bufferSize, GL_DYNAMIC_READ);
 		buffersReady.push(i);
 		GLuint copyQuery;
-		glGenQueries(1,&copyQuery);
+		glGenQueries(1, &copyQuery);
 		copyQueryReady.push(copyQuery);
 	}
 	auto numChannels = 0;
-	switch(pixelFormat){
-		case OF_PIXELS_RGB:
-			numChannels = 3;
+	switch (pixelFormat)
+	{
+	case OF_PIXELS_RGB:
+		numChannels = 3;
 		break;
-		case OF_PIXELS_RGBA:
-			numChannels = 4;
+	case OF_PIXELS_RGBA:
+		numChannels = 4;
 		break;
-		case OF_PIXELS_GRAY:
-			numChannels = 1;
+	case OF_PIXELS_GRAY:
+		numChannels = 1;
 		break;
 	};
 	size = width * height * numChannels;
@@ -85,8 +96,10 @@ void ofxTextureRecorder::setup(const Settings & settings){
 }
 
 #if OFX_VIDEO_RECORDER || OFX_HPVLIB
-void ofxTextureRecorder::setup(const ofxTextureRecorder::VideoSettings & settings){
-	if(!encodeThreads.empty()){
+void ofxTextureRecorder::setup(const ofxTextureRecorder::VideoSettings &settings)
+{
+	if (!encodeThreads.empty())
+	{
 		stopThreads();
 	}
 	width = settings.w;
@@ -99,42 +112,45 @@ void ofxTextureRecorder::setup(const ofxTextureRecorder::VideoSettings & setting
 	frame = 0;
 	firstFrame = true;
 	auto bufferSize = 0;
-	switch(glType){
-		case GL_UNSIGNED_BYTE:
-			bufferSize = ofPixels::bytesFromPixelFormat(width,height,pixelFormat);
+	switch (glType)
+	{
+	case GL_UNSIGNED_BYTE:
+		bufferSize = ofPixels::bytesFromPixelFormat(width, height, pixelFormat);
 		break;
-		case GL_SHORT:
-		case GL_UNSIGNED_SHORT:
-			bufferSize = ofShortPixels::bytesFromPixelFormat(width,height,pixelFormat);
+	case GL_SHORT:
+	case GL_UNSIGNED_SHORT:
+		bufferSize = ofShortPixels::bytesFromPixelFormat(width, height, pixelFormat);
 		break;
-		case GL_FLOAT:
-			bufferSize = ofFloatPixels::bytesFromPixelFormat(width,height,pixelFormat);
+	case GL_FLOAT:
+		bufferSize = ofFloatPixels::bytesFromPixelFormat(width, height, pixelFormat);
 		break;
-		case GL_HALF_FLOAT:
-			bufferSize = ofFloatPixels::bytesFromPixelFormat(width,height,pixelFormat)/2;
+	case GL_HALF_FLOAT:
+		bufferSize = ofFloatPixels::bytesFromPixelFormat(width, height, pixelFormat) / 2;
 		break;
 	}
 
 	// number of gpu buffers to copy the texture
 	size_t numGpuBuffers = 2;
-	for(size_t i=0; i<std::min(numGpuBuffers, size_t(2)); i++){
+	for (size_t i = 0; i < std::min(numGpuBuffers, size_t(2)); i++)
+	{
 		pixelBuffers.emplace_back();
 		pixelBuffers.back().allocate(bufferSize, GL_DYNAMIC_READ);
 		buffersReady.push(i);
 		GLuint copyQuery;
-		glGenQueries(1,&copyQuery);
+		glGenQueries(1, &copyQuery);
 		copyQueryReady.push(copyQuery);
 	}
 	auto numChannels = 0;
-	switch(pixelFormat){
-		case OF_PIXELS_RGB:
-			numChannels = 3;
+	switch (pixelFormat)
+	{
+	case OF_PIXELS_RGB:
+		numChannels = 3;
 		break;
-		case OF_PIXELS_RGBA:
-			numChannels = 4;
+	case OF_PIXELS_RGBA:
+		numChannels = 4;
 		break;
-		case OF_PIXELS_GRAY:
-			numChannels = 1;
+	case OF_PIXELS_GRAY:
+		numChannels = 1;
 		break;
 	};
 	size = width * height * numChannels;
@@ -143,17 +159,22 @@ void ofxTextureRecorder::setup(const ofxTextureRecorder::VideoSettings & setting
 	string moviePath = ofFilePath::getAbsolutePath(settings.videoPath);
 
 #if OFX_HPVLIB
-	if(std::filesystem::path(settings.videoPath).extension()==".hpv"){
+	if (std::filesystem::path(settings.videoPath).extension() == ".hpv")
+	{
 		HPV::HPVCreatorParamsInline params;
 		params.channels = 4;
 		params.fps = settings.fps;
 		params.height = settings.h;
 		params.width = settings.w;
 		params.out_path = settings.videoPath;
-		if(settings.videoCodec == "dxt1") params.type = HPV::HPVCompressionType::HPV_TYPE_DXT1_NO_ALPHA;
-		else if(settings.videoCodec == "dxt5") params.type = HPV::HPVCompressionType::HPV_TYPE_DXT5_ALPHA;
-		else if(settings.videoCodec == "cocgy") params.type = HPV::HPVCompressionType::HPV_TYPE_SCALED_DXT5_CoCg_Y;
-		else params.type = HPV::HPVCompressionType::HPV_TYPE_SCALED_DXT5_CoCg_Y;
+		if (settings.videoCodec == "dxt1")
+			params.type = HPV::HPVCompressionType::HPV_TYPE_DXT1_NO_ALPHA;
+		else if (settings.videoCodec == "dxt5")
+			params.type = HPV::HPVCompressionType::HPV_TYPE_DXT5_ALPHA;
+		else if (settings.videoCodec == "cocgy")
+			params.type = HPV::HPVCompressionType::HPV_TYPE_SCALED_DXT5_CoCg_Y;
+		else
+			params.type = HPV::HPVCompressionType::HPV_TYPE_SCALED_DXT5_CoCg_Y;
 		hpvCreator.init(params, &hpvProgress);
 		hpvCreator.process_sequence(1);
 		isHPV = true;
@@ -167,10 +188,10 @@ void ofxTextureRecorder::setup(const ofxTextureRecorder::VideoSettings & setting
 	isHPV = false;
 	stringstream outputSettings;
 	outputSettings
-	<< " " << settings.extrasettings << " "
-	<< " -c:v " << settings.videoCodec
-	<< " -b:v " << settings.bitrate
-	<< " \"" << absFilePath << "\"";
+		<< " " << settings.extrasettings << " "
+		<< " -c:v " << settings.videoCodec
+		<< " -b:v " << settings.bitrate
+		<< " \"" << absFilePath << "\"";
 
 	videoRecorder.setupCustomOutput(width, height, settings.fps, 0, 0, outputSettings.str(), false, false);
 	videoRecorder.start();
@@ -179,27 +200,35 @@ void ofxTextureRecorder::setup(const ofxTextureRecorder::VideoSettings & setting
 }
 #endif
 
-void ofxTextureRecorder::save(const ofTexture & tex){
+void ofxTextureRecorder::save(const ofTexture &tex)
+{
 	save(tex, frame++);
 }
 
-void ofxTextureRecorder::save(const ofTexture & tex, int frame_){
-	if(buffersReady.size()<std::max(pixelBuffers.size()/2 + 1,size_t(2))){
+void ofxTextureRecorder::save(const ofTexture &tex, int frame_)
+{
+	if (buffersReady.size() < std::max(pixelBuffers.size() / 2 + 1, size_t(2)))
+	{
 		{
 			GLuint time;
 			auto copyQuery = copyQueryCopying.front();
 			glGetQueryObjectuiv(copyQuery, GL_QUERY_RESULT, &time);
 
-			copyTextureTime = copyTextureTime * 0.9 + time/1000. * 0.1;
+			copyTextureTime = copyTextureTime * 0.9 + time / 1000. * 0.1;
 			copyQueryReady.push(copyQuery);
 		}
 		size_t back = 0;
-		if(!buffersReady.empty()){
+		if (!buffersReady.empty())
+		{
 			back = buffersReady.front();
 			buffersReady.pop();
-		}else if(channelReady.receive(back)){
+		}
+		else if (channelReady.receive(back))
+		{
 			pixelBuffers[back].unmap();
-		}else{
+		}
+		else
+		{
 			return;
 		}
 		auto copyQuery = copyQueryReady.front();
@@ -209,28 +238,37 @@ void ofxTextureRecorder::save(const ofTexture & tex, int frame_){
 		glEndQuery(GL_TIME_ELAPSED);
 		copyQueryCopying.push(copyQuery);
 
-		if(!buffersCopying.empty()){
+		if (!buffersCopying.empty())
+		{
 			auto front = buffersCopying.front();
 			buffersCopying.pop();
 			pixelBuffers[front].bind(GL_PIXEL_UNPACK_BUFFER);
 			pixelBuffers[front].unbind(GL_PIXEL_UNPACK_BUFFER);
 			auto pixels = pixelBuffers[front].map<unsigned char>(GL_READ_ONLY);
-			if(pixels){
-				if(isVideo){
+			if (pixels)
+			{
+				if (isVideo)
+				{
 					Buffer buffer{front, "", pixels};
 					channel.send(buffer);
-				}else{
+				}
+				else
+				{
 					std::ostringstream oss;
 					oss << folderPath << ofToString(frame_, 5, '0') << "." << ofImageFormatExtension(imageFormat);
 					Buffer buffer{front, oss.str(), pixels};
 					channel.send(buffer);
 				}
-			}else{
+			}
+			else
+			{
 				ofLogError(__FUNCTION__) << "Couldn't map buffer";
 			}
 		}
 		buffersCopying.push(back);
-	}else{
+	}
+	else
+	{
 		auto back = buffersReady.front();
 		buffersReady.pop();
 		auto copyQuery = copyQueryReady.front();
@@ -243,102 +281,139 @@ void ofxTextureRecorder::save(const ofTexture & tex, int frame_){
 	}
 }
 
-void ofxTextureRecorder::stopThreads(){
+void ofxTextureRecorder::stopThreads()
+{
 	channel.close();
 	channelReady.close();
 
-	switch(glType){
-		case GL_UNSIGNED_BYTE:
-			while(!pixelsChannel.empty()){
-				ofSleepMillis(100);
-			}
-			pixelsChannel.close();
+	switch (glType)
+	{
+	case GL_UNSIGNED_BYTE:
+		while (!pixelsChannel.empty())
+		{
+			ofSleepMillis(100);
+		}
+		pixelsChannel.close();
 		break;
-		case GL_SHORT:
-		case GL_UNSIGNED_SHORT:
-			while(!shortPixelsChannel.empty()){
-				ofSleepMillis(100);
-			}
-			shortPixelsChannel.close();
+	case GL_SHORT:
+	case GL_UNSIGNED_SHORT:
+		while (!shortPixelsChannel.empty())
+		{
+			ofSleepMillis(100);
+		}
+		shortPixelsChannel.close();
 		break;
-		case GL_FLOAT:
-			while(!floatPixelsChannel.empty()){
-				ofSleepMillis(100);
-			}
-			floatPixelsChannel.close();
+	case GL_FLOAT:
+		while (!floatPixelsChannel.empty())
+		{
+			ofSleepMillis(100);
+		}
+		floatPixelsChannel.close();
 		break;
-		case GL_HALF_FLOAT:
-			while(!halffloatPixelsChannel.empty()){
-				ofSleepMillis(100);
-			}
-			halffloatPixelsChannel.close();
-			while(!floatPixelsChannel.empty()){
-				ofSleepMillis(100);
-			}
-			floatPixelsChannel.close();
-			for(auto &t: halfDecodingThreads){
-				t.join();
-			}
+	case GL_HALF_FLOAT:
+		while (!halffloatPixelsChannel.empty())
+		{
+			ofSleepMillis(100);
+		}
+		halffloatPixelsChannel.close();
+		while (!floatPixelsChannel.empty())
+		{
+			ofSleepMillis(100);
+		}
+		floatPixelsChannel.close();
+		for (auto &t : halfDecodingThreads)
+		{
+			t.join();
+		}
 		break;
 	}
 
-	while(!encodedChannel.empty()){
+	while (!encodedChannel.empty())
+	{
 		ofSleepMillis(100);
 	}
 	encodedChannel.close();
-	for(auto &t: encodeThreads){
+	for (auto &t : encodeThreads)
+	{
 		t.join();
 	}
 	encodeThreads.clear();
 	downloadThread.join();
 	saveThread.join();
 #if OFX_VIDEO_RECORDER
-	if(isVideo){
+	if (isVideo)
+	{
 		videoRecorder.close();
 	}
 #endif
 #if OFX_HPVLIB
-	if(isHPV){
+	if (isHPV)
+	{
 		hpvCreator.stop();
 		hpvProgressThread.join();
 	}
 #endif
-
-
+	// cleanupFramesFolder();
 }
 
-void ofxTextureRecorder::createThreads(size_t numThreads){
-	for(size_t i=0; i<numThreads; i++){
-		switch(glType){
-			case GL_UNSIGNED_BYTE:{
-				ofPixels pixels;
-				pixels.allocate(width, height, pixelFormat);
-				returnPixelsChannel.send(std::move(pixels));
-				poolSize += 1;
+void ofxTextureRecorder::cleanupFramesFolder()
+{
+	if (!folderPath.empty())
+	{
+		ofDirectory framesDir(folderPath);
+		if (framesDir.exists())
+		{
+			framesDir.allowExt(ofImageFormatExtension(imageFormat)); // Only delete files with the image format extension
+			framesDir.listDir();
+			for (auto file : framesDir.getFiles())
+			{
+				file.remove(); // Deletes each file
 			}
-			case GL_SHORT:
-			case GL_UNSIGNED_SHORT:{
-				ofShortPixels pixels;
-				pixels.allocate(width, height, pixelFormat);
-				returnShortPixelsChannel.send(std::move(pixels));
-				shortPoolSize += 1;
-			}
-			case GL_FLOAT:{
-				ofFloatPixels pixels;
-				pixels.allocate(width, height, pixelFormat);
-				returnFloatPixelsChannel.send(std::move(pixels));
-				floatPoolSize += 1;
-			}
-			case GL_HALF_FLOAT:{
-				std::vector<half_float::half> pixels;
-				pixels.resize(size);
-				returnHalfFloatPixelsChannel.send(std::move(pixels));
-				halfFloatPoolSize += 1;
-			}
+			ofLogNotice("ofxTextureRecorder") << "Frames folder cleaned up: " << folderPath;
+		}
+	}
+}
+
+void ofxTextureRecorder::createThreads(size_t numThreads)
+{
+	for (size_t i = 0; i < numThreads; i++)
+	{
+		switch (glType)
+		{
+		case GL_UNSIGNED_BYTE:
+		{
+			ofPixels pixels;
+			pixels.allocate(width, height, pixelFormat);
+			returnPixelsChannel.send(std::move(pixels));
+			poolSize += 1;
+		}
+		case GL_SHORT:
+		case GL_UNSIGNED_SHORT:
+		{
+			ofShortPixels pixels;
+			pixels.allocate(width, height, pixelFormat);
+			returnShortPixelsChannel.send(std::move(pixels));
+			shortPoolSize += 1;
+		}
+		case GL_FLOAT:
+		{
+			ofFloatPixels pixels;
+			pixels.allocate(width, height, pixelFormat);
+			returnFloatPixelsChannel.send(std::move(pixels));
+			floatPoolSize += 1;
+		}
+		case GL_HALF_FLOAT:
+		{
+			std::vector<half_float::half> pixels;
+			pixels.resize(size);
+			returnHalfFloatPixelsChannel.send(std::move(pixels));
+			halfFloatPoolSize += 1;
+		}
 		}
 	}
 
-	downloadThread = std::thread([&]{
+	downloadThread = std::thread([&]
+								 {
 		Buffer buffer;
 		size_t frameNum = 0;
 		switch(glType){
@@ -388,13 +463,13 @@ void ofxTextureRecorder::createThreads(size_t numThreads){
 					halffloatPixelsChannel.send({frameNum++, buffer.path, std::move(halfdata)});
 				}
 			}break;
-		}
-	});
-
+		} });
 
 #if OFX_HPVLIB
-	if(isHPV){
-		hpvProgressThread = std::thread([this]{
+	if (isHPV)
+	{
+		hpvProgressThread = std::thread([this]
+										{
 			while(true){
 					HPV::HPVCompressionProgress progress;
 					hpvProgress.wait_and_pop(progress);
@@ -409,14 +484,16 @@ void ofxTextureRecorder::createThreads(size_t numThreads){
 												  << std::filesystem::path(progress.done_item_name).filename() << " "
 												  << progress.compression_ratio << "%" <<endl;
 					}
-			}
-		});
+			} });
 	}
 #endif
 
-	if(glType==GL_HALF_FLOAT){
-		for(size_t i=0;i<numThreads/2;i++){
-			halfDecodingThreads.emplace_back(([&]{
+	if (glType == GL_HALF_FLOAT)
+	{
+		for (size_t i = 0; i < numThreads / 2; i++)
+		{
+			halfDecodingThreads.emplace_back(([&]
+											  {
 				Frame<std::vector<half_float::half>> halfdata;
 				while(halffloatPixelsChannel.receive(halfdata)){
 					auto then = ofGetElapsedTimeMicros();
@@ -429,15 +506,15 @@ void ofxTextureRecorder::createThreads(size_t numThreads){
 					auto now = ofGetElapsedTimeMicros();
 					halfDecodingTime = halfDecodingTime * 0.9 + (now - then) * 0.1;
 					floatPixelsChannel.send({halfdata.id, halfdata.path, std::move(pixels)});
-				}
-			}));
+				} }));
 		}
 	}
 
-
 	ofLogNotice(__FUNCTION__) << "Initializing with " << numThreads << " encoding threads";
-	for(size_t i=0;i<numThreads;i++){
-		encodeThreads.emplace_back([&]{
+	for (size_t i = 0; i < numThreads; i++)
+	{
+		encodeThreads.emplace_back([&]
+								   {
 			if(isVideo){
 
 #if OFX_VIDEO_RECORDER
@@ -580,10 +657,10 @@ void ofxTextureRecorder::createThreads(size_t numThreads){
 						}
 					}break;
 				}
-			}
-		});
+			} });
 	}
-	saveThread = std::thread([&]{
+	saveThread = std::thread([&]
+							 {
 		std::pair<std::string, ofBuffer> encoded;
 		while(encodedChannel.receive(encoded)){
 			auto then = ofGetElapsedTimeMicros();
@@ -591,57 +668,78 @@ void ofxTextureRecorder::createThreads(size_t numThreads){
 			file.writeFromBuffer(encoded.second);
 			auto now = ofGetElapsedTimeMicros();
 			saveTime = halfDecodingTime * 0.9 + (now - then) * 0.1;
-		}
-	});
+		} });
 }
 
-ofPixels ofxTextureRecorder::getBuffer(){
+ofPixels ofxTextureRecorder::getBuffer()
+{
 	ofPixels pixels;
-	if(!returnPixelsChannel.tryReceive(pixels)){
-		if(poolSize * ofPixels::bytesFromPixelFormat(width, height, pixelFormat) < maxMemoryUsage){
+	if (!returnPixelsChannel.tryReceive(pixels))
+	{
+		if (poolSize * ofPixels::bytesFromPixelFormat(width, height, pixelFormat) < maxMemoryUsage)
+		{
 			pixels.allocate(width, height, pixelFormat);
 			poolSize += 1;
-		}else{
+		}
+		else
+		{
 			returnPixelsChannel.receive(pixels);
 		}
 	}
 	return pixels;
 };
 
-ofShortPixels ofxTextureRecorder::getShortBuffer(){
+ofShortPixels ofxTextureRecorder::getShortBuffer()
+{
 	ofShortPixels pixels;
-	if(!returnShortPixelsChannel.tryReceive(pixels)){
-		if(shortPoolSize * ofShortPixels::bytesFromPixelFormat(width, height, pixelFormat) < maxMemoryUsage){
+	if (!returnShortPixelsChannel.tryReceive(pixels))
+	{
+		if (shortPoolSize * ofShortPixels::bytesFromPixelFormat(width, height, pixelFormat) < maxMemoryUsage)
+		{
 			pixels.allocate(width, height, pixelFormat);
 			shortPoolSize += 1;
-		}else{
+		}
+		else
+		{
 			returnShortPixelsChannel.receive(pixels);
 		}
 	}
 	return pixels;
 };
 
-ofFloatPixels ofxTextureRecorder::getFloatBuffer(){
-	if(glType==GL_FLOAT){
+ofFloatPixels ofxTextureRecorder::getFloatBuffer()
+{
+	if (glType == GL_FLOAT)
+	{
 		ofFloatPixels pixels;
-		if(!returnFloatPixelsChannel.tryReceive(pixels)){
-			if(floatPoolSize * ofFloatPixels::bytesFromPixelFormat(width, height, pixelFormat) < maxMemoryUsage){
+		if (!returnFloatPixelsChannel.tryReceive(pixels))
+		{
+			if (floatPoolSize * ofFloatPixels::bytesFromPixelFormat(width, height, pixelFormat) < maxMemoryUsage)
+			{
 				pixels.allocate(width, height, pixelFormat);
 				floatPoolSize += 1;
-			}else{
+			}
+			else
+			{
 				returnFloatPixelsChannel.receive(pixels);
 			}
 		}
 		return pixels;
-	}else{
+	}
+	else
+	{
 		ofFloatPixels pixels;
-		if(!returnFloatPixelsChannel.tryReceive(pixels)){
+		if (!returnFloatPixelsChannel.tryReceive(pixels))
+		{
 			auto floatSize = floatPoolSize * ofFloatPixels::bytesFromPixelFormat(width, height, pixelFormat);
 			auto halfFloatSize = halfFloatPoolSize * size * sizeof(half_float::half);
-			if(halfFloatSize + floatSize < maxMemoryUsage){
+			if (halfFloatSize + floatSize < maxMemoryUsage)
+			{
 				pixels.allocate(width, height, pixelFormat);
 				floatPoolSize += 1;
-			}else{
+			}
+			else
+			{
 				returnFloatPixelsChannel.receive(pixels);
 			}
 		}
@@ -649,93 +747,96 @@ ofFloatPixels ofxTextureRecorder::getFloatBuffer(){
 	}
 };
 
-std::vector<half_float::half> ofxTextureRecorder::getHalfFloatBuffer(){
+std::vector<half_float::half> ofxTextureRecorder::getHalfFloatBuffer()
+{
 	std::vector<half_float::half> pixels;
-	if(!returnHalfFloatPixelsChannel.tryReceive(pixels)){
+	if (!returnHalfFloatPixelsChannel.tryReceive(pixels))
+	{
 		auto floatSize = floatPoolSize * ofFloatPixels::bytesFromPixelFormat(width, height, pixelFormat);
 		auto halfFloatSize = halfFloatPoolSize * size * sizeof(half_float::half);
-		if(halfFloatSize + floatSize < maxMemoryUsage){
+		if (halfFloatSize + floatSize < maxMemoryUsage)
+		{
 			pixels.resize(size);
 			halfFloatPoolSize += 1;
-		}else{
+		}
+		else
+		{
 			returnHalfFloatPixelsChannel.receive(pixels);
 		}
 	}
 	return pixels;
 };
 
-uint64_t ofxTextureRecorder::getAvgTimeEncode() const{
+uint64_t ofxTextureRecorder::getAvgTimeEncode() const
+{
 	return encodingTime;
 }
 
-uint64_t ofxTextureRecorder::getAvgTimeSave() const{
+uint64_t ofxTextureRecorder::getAvgTimeSave() const
+{
 	return saveTime;
 }
 
-uint64_t ofxTextureRecorder::getAvgTimeGpuDownload() const{
+uint64_t ofxTextureRecorder::getAvgTimeGpuDownload() const
+{
 	return timeDownload;
 }
 
-uint64_t ofxTextureRecorder::getAvgTimeTextureCopy() const{
+uint64_t ofxTextureRecorder::getAvgTimeTextureCopy() const
+{
 	return copyTextureTime;
 }
 
 ofxTextureRecorder::Settings::Settings(int w, int h)
-:w(w)
-,h(h){}
+	: w(w), h(h) {}
 
-ofxTextureRecorder::Settings::Settings(const ofTexture & tex)
-	:ofxTextureRecorder::Settings(tex.getTextureData()){}
+ofxTextureRecorder::Settings::Settings(const ofTexture &tex)
+	: ofxTextureRecorder::Settings(tex.getTextureData()) {}
 
-ofxTextureRecorder::Settings::Settings(const ofTextureData & texData)
-:w(texData.width)
-,h(texData.height)
-,textureInternalFormat(texData.glInternalFormat){
-	switch(ofGetImageTypeFromGLType(texData.glInternalFormat)){
-		case OF_IMAGE_COLOR:
-			pixelFormat = OF_PIXELS_RGB;
+ofxTextureRecorder::Settings::Settings(const ofTextureData &texData)
+	: w(texData.width), h(texData.height), textureInternalFormat(texData.glInternalFormat)
+{
+	switch (ofGetImageTypeFromGLType(texData.glInternalFormat))
+	{
+	case OF_IMAGE_COLOR:
+		pixelFormat = OF_PIXELS_RGB;
 		break;
-		case OF_IMAGE_COLOR_ALPHA:
-			pixelFormat = OF_PIXELS_RGBA;
+	case OF_IMAGE_COLOR_ALPHA:
+		pixelFormat = OF_PIXELS_RGBA;
 		break;
-		case OF_IMAGE_GRAYSCALE:
-			pixelFormat = OF_PIXELS_GRAY;
+	case OF_IMAGE_GRAYSCALE:
+		pixelFormat = OF_PIXELS_GRAY;
 		break;
-		default:
-			ofLogError("ofxTextureRecorder") << "Unsupported texture format";
+	default:
+		ofLogError("ofxTextureRecorder") << "Unsupported texture format";
 	}
 	glType = ofGetGlTypeFromInternal(texData.glInternalFormat);
-
 }
 
 #if OFX_VIDEO_RECORDER
 ofxTextureRecorder::VideoSettings::VideoSettings(int w, int h, float fps)
-:w(w)
-,h(h)
-,fps(fps){}
+	: w(w), h(h), fps(fps) {}
 
-ofxTextureRecorder::VideoSettings::VideoSettings(const ofTexture & tex, float fps)
-	:ofxTextureRecorder::VideoSettings(tex.getTextureData(),fps){}
+ofxTextureRecorder::VideoSettings::VideoSettings(const ofTexture &tex, float fps)
+	: ofxTextureRecorder::VideoSettings(tex.getTextureData(), fps) {}
 
-ofxTextureRecorder::VideoSettings::VideoSettings(const ofTextureData & texData, float fps)
-:w(texData.width)
-,h(texData.height)
-,fps(fps)
-,textureInternalFormat(texData.glInternalFormat){
-	switch(ofGetImageTypeFromGLType(texData.glInternalFormat)){
-		case OF_IMAGE_COLOR:
-			pixelFormat = OF_PIXELS_RGB;
+ofxTextureRecorder::VideoSettings::VideoSettings(const ofTextureData &texData, float fps)
+	: w(texData.width), h(texData.height), fps(fps), textureInternalFormat(texData.glInternalFormat)
+{
+	switch (ofGetImageTypeFromGLType(texData.glInternalFormat))
+	{
+	case OF_IMAGE_COLOR:
+		pixelFormat = OF_PIXELS_RGB;
 		break;
-		case OF_IMAGE_COLOR_ALPHA:
-			pixelFormat = OF_PIXELS_RGBA;
+	case OF_IMAGE_COLOR_ALPHA:
+		pixelFormat = OF_PIXELS_RGBA;
 		break;
-		case OF_IMAGE_GRAYSCALE:
-			pixelFormat = OF_PIXELS_GRAY;
+	case OF_IMAGE_GRAYSCALE:
+		pixelFormat = OF_PIXELS_GRAY;
 		break;
-		default:
-			ofLogError("ofxTextureRecorder") << "Unsupported texture format";
+	default:
+		ofLogError("ofxTextureRecorder") << "Unsupported texture format";
 	}
 	glType = ofGetGlTypeFromInternal(texData.glInternalFormat);
-
 }
 #endif
