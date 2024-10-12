@@ -353,7 +353,7 @@ void ofxTextureRecorder::stopThreads()
 		hpvProgressThread.join();
 	}
 #endif
-	// cleanupFramesFolder();
+	cleanupFramesFolder();
 }
 
 void ofxTextureRecorder::cleanupFramesFolder()
